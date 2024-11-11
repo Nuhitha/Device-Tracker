@@ -1,0 +1,189 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define BUTTON_PIN 0
+#define BUZZER_PIN 1
+#define LED_PIN 2
+#define SOS_PIN 6
+#define GPS_STATUS_OK 1
+#define GPS_STATUS_FAILED 0
+
+char data[256] = "";
+char number[] = "9014475682";
+char gpsString[256] = "";
+float latitude = 17.411754130274325;
+float longitude = 78.39871725194834;
+int temp = 0;
+int temp1 = 0;
+int gps_status = GPS_STATUS_FAILED;
+int buttonState = 0;
+
+// Function declarations
+void initSystem();
+void regNumber();
+void gpsEvent();
+void getGps();
+void showCoordinates();
+void sendSms();
+void coordinate2Dec();
+void handleButtonPress();
+
+// Placeholder functions for hardware interaction 
+void lcdPrint(const char* message);
+void sendSerialCommand(const char* command);
+void delayMs(int milliseconds);
+void readGpsData(char* gpsData);
+
+void initSystem() {
+    // Simulate system initialization
+    lcdPrint("SHIPMENT TRACKING");
+    delayMs(2000);
+    lcdPrint("USING GSM AND GPS");
+    delayMs(2000);
+    lcdPrint("Initializing");
+    delayMs(1000);
+    
+    sendSerialCommand("AT");
+    sendSerialCommand("ATE0");
+    sendSerialCommand("AT+CMGF=1");
+    sendSerialCommand("AT+CNMI=1,2,0,0");
+
+    regNumber();
+    lcdPrint("System Ready");
+    delayMs(1000);
+    lcdPrint("READY TO USE...");
+}
+
+void regNumber() {
+    lcdPrint("PLZ STORE NUM");
+
+    // Simulate reading serial data (in real code, use Serial.available() and Serial.read())
+    char siva[] = "NUMBER:9014475682"; // Example input for the number
+    int len = strlen(siva);
+    int ourData = -1;
+    
+    for (int i = 0; i < len; i++) {
+        if (strncmp(&siva[i], "NUMBER:", 7) == 0) {
+            ourData = i;
+            break;
+        }
+    }
+
+    if (ourData != -1) {
+        strncpy(number, &siva[ourData + 7], 10);
+        lcdPrint("Num:");
+        lcdPrint(number);
+        delayMs(1000);
+    }
+    
+    sendSerialCommand("AT+CMGS=\"9014475682\""); // Send SMS to number
+    sendSerialCommand("WELCOME TO HARDWARE KIT");
+    delayMs(10000);
+    lcdPrint("SMS SENT.....");
+    delayMs(1000);
+    lcdPrint("wating for input");
+}
+
+void gpsEvent() {
+    char inChar;
+    int i = 0;
+    gps_status = GPS_STATUS_FAILED;
+    memset(gpsString, 0, sizeof(gpsString));
+    
+    char gpsData[] = "$GPRMC,123456,A,1754.1234,N,07834.5678,E,1.1,1.1,010404,,*44";
+    while (1) {
+        // Read GPS data and check for valid GPS event
+        for (int j = 0; j < strlen(gpsData); j++) {
+            inChar = gpsData[j];
+            gpsString[i++] = inChar;
+            
+            // Check if the GPS string is valid
+            if (strncmp(gpsString, "$GPRMC", 6) == 0) {
+                gps_status = GPS_STATUS_OK;
+                break;
+            }
+        }
+
+        if (gps_status == GPS_STATUS_OK) {
+            break;
+        }
+    }
+}
+
+void getGps() {
+    lcdPrint("Getting GPS Data");
+    gps_status = GPS_STATUS_FAILED;
+    gpsEvent();
+    coordinate2Dec();
+}
+
+void showCoordinates() {
+    lcdPrint("Lat:");
+    printf("%f", latitude);
+    lcdPrint("\nLog:");
+    printf("%f", longitude);
+    delayMs(2000);
+    lcdPrint("Ready to use...");
+}
+
+void coordinate2Dec() {
+    // Parsing GPS data (simulating the conversion)
+    char latDegree[] = "17";
+    char latMinute[] = "24.1234";
+    char lonDegree[] = "78";
+    char lonMinute[] = "34.5678";
+
+    latitude = atof(latDegree) + atof(latMinute) / 60;
+    longitude = atof(lonDegree) + atof(lonMinute) / 60;
+}
+
+void sendSms() {
+    lcdPrint("Sending Sms");
+    sendSerialCommand("AT+CMGS=\"9014475682\"");
+    
+    printf("Latitude: %.6f", latitude);
+    printf("Longitude: %.6f", longitude);
+    printf("http://maps.google.com/maps?&z=15&mrt=yp&t=k&q=%.6f+%.6f", latitude, longitude);
+    sendSerialCommand("SMS SENT.....");
+    delayMs(2000);
+    lcdPrint("Check u r INBOX");
+}
+
+void handleButtonPress() {
+    buttonState = BUTTON_PIN; // Placeholder for actual button input reading
+    if (buttonState == 0) { // Assuming 0 is button pressed
+        getGps();
+        sendSms();
+    }
+}
+
+void lcdPrint(const char* message) {
+    // Placeholder function to simulate LCD print
+    printf("%s\n", message);
+}
+
+void sendSerialCommand(const char* command) {
+    // Placeholder function to simulate sending AT commands to GSM module
+    printf("%s\n", command);
+}
+
+void delayMs(int milliseconds) {
+    // Simulate delay
+    for (int i = 0; i < milliseconds; i++) {
+        // No-op
+    }
+}
+
+void readGpsData(char* gpsData) {
+    // Placeholder function to simulate reading GPS data
+    strcpy(gpsData, "$GPRMC,123456,A,1754.1234,N,07834.5678,E,1.1,1.1,010404,,*44");
+}
+
+int main() {
+    initSystem();
+    while (1) {
+        handleButtonPress();
+    }
+    return 0;
+}
